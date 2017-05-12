@@ -6,13 +6,23 @@
 class git_source : public source
 {
 public:
-    git_source(boost::asio::io_service &service, const std::string &host, const std::string &path, const std::string &user, const std::string &pass)
+    git_source(boost::asio::io_service &service,
+               const std::string &host,
+               const std::string &path,
+               const std::string &user,
+               const std::string &pass,
+               const std::string &url)
         : _service(service),
           _host(host),
           _path(path),
           _user(user),
-          _pass(pass)
+          _pass(pass),
+          _url(url)
     {
+        if (_url.empty())
+        {
+            _url = "ssh://" + _user + "@" + _host + ":" + _path;
+        }
     }
 
     void fetch(const boost::filesystem::path &workspace_path, params_map &context_params, source_finish_handler finish_handler)
@@ -20,7 +30,8 @@ public:
         namespace bp = boost::process;
 
         // todo: if windows?
-        std::string args ="/bin/bash -c \"sshpass -p '" + _pass + "' git clone ssh://" + _user + "@" + _host + ":" + _path + " .\"";
+
+        std::string args ="/bin/bash -c \"sshpass -p '" + _pass + "' git clone " + _url + " .\"";
 
         _log_buf.consume(_log_buf.size());
 
@@ -84,6 +95,7 @@ private:
     std::string _path;
     std::string _user;
     std::string _pass;
+    std::string _url;
     boost::process::child _child;
     boost::asio::streambuf _log_buf;
     int _last_revision = 0;
@@ -100,7 +112,8 @@ public:
             params.get_param("host"),
             params.get_param("path"),
             params.get_param("user"),
-            params.get_param("pass")
+            params.get_param("pass"),
+            params.get_param("url")
         );
     }
 };
